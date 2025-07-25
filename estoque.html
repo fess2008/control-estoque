@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle de Estoque Simples</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    nav {
+      margin-bottom: 20px;
+    }
+    nav button {
+      padding: 10px 20px;
+      margin-right: 5px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+    nav button:hover {
+      background-color: #0056b3;
+    }
+    nav button.active {
+      background-color: #0056b3;
+    }
+    #estoque {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      max-width: 400px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 7px;
+      box-sizing: border-box;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button#btnAddAtualizar, button#btnLimpar {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      border-radius: 4px;
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button#btnAddAtualizar:hover {
+      background-color: #218838;
+    }
+    button#btnLimpar {
+      background-color: #dc3545;
+      margin-top: 10px;
+    }
+    button#btnLimpar:hover {
+      background-color: #c82333;
+    }
+    ul {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 15px;
+      max-height: 250px;
+      overflow-y: auto;
+      border-top: 1px solid #ddd;
+    }
+    ul li {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    ul li button {
+      background-color: #dc3545;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background-color 0.3s ease;
+    }
+    ul li button:hover {
+      background-color: #b21f2d;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <button class="abaBtn active" data-aba="frutas">Frutas</button>
+  <button class="abaBtn" data-aba="mercado">Mercado</button>
+  <button class="abaBtn" data-aba="bebidas">Bebidas</button>
+</nav>
+
+<div id="estoque">
+  <h2 id="tituloAba">Estoque de Frutas</h2>
+
+  <label for="produto">Produto:</label>
+  <input type="text" id="produto" autocomplete="off" />
+
+  <label for="quantidade">Quantidade:</label>
+  <input type="number" id="quantidade" min="1" value="1" />
+
+  <button id="btnAddAtualizar">Adicionar / Atualizar</button>
+  <button id="btnLimpar">Limpar Estoque</button>
+
+  <ul id="lista-frutas"></ul>
+  <ul id="lista-mercado" style="display:none"></ul>
+  <ul id="lista-bebidas" style="display:none"></ul>
+</div>
+
+<script>
+  const abas = ['frutas', 'mercado', 'bebidas'];
+  let abaAtual = 'frutas';
+
+  // Estrutura de dados: produtos por aba
+  // Exemplo: produtos['frutas'] = { 'banana': {quantidade: 3, preco: 2.50}, ... }
+  let produtos = {};
+
+  // Carregar do localStorage
+  function carregarLocalStorage() {
+    const dados = localStorage.getItem('estoqueProdutos');
+    if(dados) {
+      produtos = JSON.parse(dados);
+    } else {
+      produtos = { frutas: {}, mercado: {}, bebidas: {} };
+    }
+  }
+
+  // Salvar no localStorage
+  function salvarLocalStorage() {
+    localStorage.setItem('estoqueProdutos', JSON.stringify(produtos));
+  }
+
+  // Mostrar produtos na aba atual
+  function mostrarProdutos(aba) {
+    abas.forEach(a => {
+      const ul = document.getElementById('lista-' + a);
+      ul.style.display = a === aba ? 'block' : 'none';
+    });
+
+    const lista = document.getElementById('lista-' + aba);
+    lista.innerHTML = '';
+
+    const nomes = Object.keys(produtos[aba]).sort((a, b) => a.localeCompare(b));
+
+    nomes.forEach(nome => {
+      const p = produtos[aba][nome];
+      const li = document.createElement('li');
+      li.textContent = `${nome} - Quantidade: ${p.quantidade} - Preço unitário: R$ ${p.preco.toFixed(2)} - Total: R$ ${(p.quantidade * p.preco).toFixed(2)}`;
+
+      // Botão excluir
+      const btnExcluir = document.createElement('button');
+      btnExcluir.textContent = 'Excluir';
+      btnExcluir.onclick = () => {
+        if(confirm(`Excluir ${nome} do estoque de ${aba}?`)) {
+          delete produtos[aba][nome];
+          salvarLocalStorage();
+          mostrarProdutos(aba);
+        }
+      };
+
+      li.appendChild(btnExcluir);
+      lista.appendChild(li);
+    });
+  }
+
+  // Mudar aba
+  document.querySelectorAll('.abaBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      abaAtual = btn.getAttribute('data-aba');
+      document.getElementById('tituloAba').textContent = `Estoque de ${btn.textContent}`;
+      document.querySelectorAll('.abaBtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mostrarProdutos(abaAtual);
+    });
+  });
+
+  // Função para encontrar produto em qualquer aba
+  function encontrarProdutoEmAbas(nomeProduto) {
+    nomeProduto = nomeProduto.toLowerCase();
+    for(const aba of abas) {
+      for(const nome in produtos[aba]) {
+        if(nome.toLowerCase() === nomeProduto) {
+          return aba;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Adicionar ou atualizar produto
+  document.getElementById('btnAddAtualizar').addEventListener('click', () => {
+    const nomeInput = document.getElementById('produto');
+    const qtdInput = document.getElementById('quantidade');
+
+    let nome = nomeInput.value.trim();
+    let qtd = parseInt(qtdInput.value);
+
+    if(!nome) {
+      alert('Digite o nome do produto.');
+      return;
+    }
+    if(isNaN(qtd) || qtd <= 0) {
+      alert('Digite uma quantidade válida.');
+      return;
+    }
+
+    // Verificar se produto existe em outra aba
+    const abaEncontrada = encontrarProdutoEmAbas(nome);
+    if(abaEncontrada && abaEncontrada !== abaAtual) {
+      if(confirm(`O produto "${nome}" já existe na aba "${abaEncontrada}". Deseja ir para essa aba?`)) {
+        // Trocar para aba existente
+        abaAtual = abaEncontrada;
+        document.querySelectorAll('.abaBtn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.abaBtn[data-aba="${abaAtual}"]`).classList.add('active');
+        document.getElementById('tituloAba').textContent = `Estoque de ${abaAtual.charAt(0).toUpperCase() + abaAtual.slice(1)}`;
+        mostrarProdutos(abaAtual);
+        return;
+      } else {
+        // Cancelar inclusão
+        return;
+      }
+    }
+
+    // Se o produto não existe na aba atual, pedir preço
+    if(!produtos[abaAtual][nome]) {
+      let precoStr = prompt(`Digite o preço unitário de "${nome}":`);
+      if(precoStr === null) return; // Cancelou
+      let preco = parseFloat(precoStr.replace(',', '.'));
+      if(isNaN(preco) || preco <= 0) {
+        alert('Preço inválido. Operação cancelada.');
+        return;
+      }
+      produtos[abaAtual][nome] = { quantidade: qtd, preco: preco };
+    } else {
+      // Produto existe, somar quantidade e manter preço salvo
+      produtos[abaAtual][nome].quantidade += qtd;
+    }
+
+    salvarLocalStorage();
+    mostrarProdutos(abaAtual);
+    nomeInput.value = '';
+    qtdInput.value = 1;
+  });
+
+  // Botão limpar estoque
+  document.getElementById('btnLimpar').addEventListener('click', () => {
+    if(confirm(`Deseja realmente limpar todo o estoque da aba ${abaAtual}?`)) {
+      produtos[abaAtual] = {};
+      salvarLocalStorage();
+      mostrarProdutos(abaAtual);
+    }
+  });
+
+  // Inicialização
+  carregarLocalStorage();
+  mostrarProdutos(abaAtual);
+</script>
+
+</body>
+</html>
